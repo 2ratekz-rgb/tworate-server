@@ -161,6 +161,9 @@ def create_payment_card():
             return jsonify({"error": "Неверная сумма"}), 400
         if not order_id:
             return jsonify({"error": "Нет order_id"}), 400
+        # AnyPay требует чтобы pay_id был числом (без букв и спецсимволов)
+        if not order_id.isdigit():
+            return jsonify({"error": "order_id должен содержать только цифры (требование AnyPay)"}), 400
 
         # AnyPay требует amount как строку с двумя знаками после запятой
         amount_str = f"{float(amount_kzt):.2f}"
@@ -265,6 +268,12 @@ def anypay_notify():
         method         = params.get("method", "")
         profit         = params.get("profit", "")
         received_sign  = params.get("sign", "")
+
+        # Если пришёл пустой/проверочный запрос (валидация URL от AnyPay) —
+        # сразу отвечаем OK, чтобы кабинет AnyPay принял URL оповещения
+        if not merchant_id and not pay_id:
+            print(f"[ANYPAY NOTIFY] ℹ️ Проверочный запрос ({request.method}) — отвечаем OK")
+            return "OK", 200
 
         # Проверяем merchant_id
         if merchant_id != ANYPAY_PROJECT_ID:
