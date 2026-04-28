@@ -185,6 +185,20 @@ def create_payment_card():
         ])
         sign = hashlib.sha256(sign_str.encode("utf-8")).hexdigest()
 
+        # === ДИАГНОСТИКА (можно убрать когда заработает) ===
+        # Маскируем секретный ключ — показываем только первые 3 и последние 3 символа
+        sk = ANYPAY_SECRET_KEY
+        sk_masked = (sk[:3] + "..." + sk[-3:]) if len(sk) > 6 else "TOO_SHORT"
+        print(f"[ANYPAY DEBUG] project_id='{ANYPAY_PROJECT_ID}' (len={len(ANYPAY_PROJECT_ID)})")
+        print(f"[ANYPAY DEBUG] pay_id='{order_id}'")
+        print(f"[ANYPAY DEBUG] amount='{amount_str}'")
+        print(f"[ANYPAY DEBUG] currency='{ANYPAY_CURRENCY}'")
+        print(f"[ANYPAY DEBUG] desc='{desc}'")
+        print(f"[ANYPAY DEBUG] success_url='{success_url}'")
+        print(f"[ANYPAY DEBUG] fail_url='{fail_url}'")
+        print(f"[ANYPAY DEBUG] secret_key={sk_masked} (len={len(sk)})")
+        print(f"[ANYPAY DEBUG] sign={sign}")
+
         # Параметры для редиректа на страницу оплаты AnyPay
         params = {
             "merchant_id": ANYPAY_PROJECT_ID,
@@ -401,6 +415,33 @@ def payment_info():
         "method":   order.get("method"),
         "status":   order.get("status"),
         "paid_at":  order.get("paid_at"),
+    })
+
+
+# =============================================
+# ДИАГНОСТИКА AnyPay (можно удалить когда заработает)
+# =============================================
+@app.route("/anypay-debug", methods=["GET"])
+def anypay_debug():
+    """
+    Показывает что именно загружено из переменных окружения для AnyPay.
+    Секретные значения маскируются — видны только длина и крайние символы.
+    """
+    def mask(s, n=3):
+        if not s or s.startswith("REPLACE_WITH"):
+            return f"⚠️ НЕ ЗАДАНО (используется заглушка: {s!r})"
+        if len(s) <= n * 2:
+            return f"СЛИШКОМ КОРОТКО ({len(s)} симв)"
+        return f"{s[:n]}...{s[-n:]} (len={len(s)})"
+
+    return jsonify({
+        "project_id":    ANYPAY_PROJECT_ID,
+        "secret_key":    mask(ANYPAY_SECRET_KEY),
+        "api_id":        mask(ANYPAY_API_ID),
+        "api_key":       mask(ANYPAY_API_KEY),
+        "currency":      ANYPAY_CURRENCY,
+        "success_url":   SUCCESS_URL,
+        "fail_url":      FAIL_URL,
     })
 
 
